@@ -1,12 +1,10 @@
 [package]
-name = "celeritas"
+name = "logger"
 version = "0.1.0"
 authors = ["laik <laik.lj@me.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies.logger]
-path = "logger"
-
 [dependencies]
+syslog = "2.2.0"
