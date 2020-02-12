@@ -91,7 +91,10 @@ impl Write for Output {
                 v.send(Vec::from(
                     buf.iter().map(|&x| x as char).collect::<String>(),
                 ))
-                .map_err(|e| println!("Output into Channel error: {:?}", e))
+                .map_err(|e| {
+                    println!("Output into Channel error: {:?}", e);
+                    e
+                })
                 .ok();
                 Ok(buf.len())
             }

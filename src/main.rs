@@ -1,12 +1,21 @@
-// #[macro_use(log_and_exit)]
+#[macro_use(sendlog)]
 extern crate logger;
+
 use logger::{Level, Logger};
-use std::thread;
-use std::time::Duration;
+use std::sync::mpsc::channel;
 
 fn main() {
-    let logger = Logger::new(Level::Warning);
-    logger.log(Level::Warning, "hello Celeritas".to_owned(), None);
+    let (tx, rx) = channel();
+    let logger = Logger::channel(Level::Debug, tx);
+    let sender = logger.sender();
 
-    thread::sleep(Duration::new(0, 1));
+    sendlog!(sender, Debug, "hello {}", "Celeritas");
+    println!(
+        "{:?}",
+        rx.recv()
+            .unwrap()
+            .iter()
+            .map(|&x| x as char)
+            .collect::<String>()
+    );
 }
