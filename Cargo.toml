@@ -10,3 +10,4 @@ edition = "2018"
 path = "logger"
 
 [dependencies]
+slog = "2.5.2"

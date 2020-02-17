@@ -5,6 +5,7 @@ name = "celeritas"
 version = "0.1.0"
 dependencies = [
  "logger",
+ "slog",
 ]
 
 [[package]]
@@ -114,6 +115,12 @@ name = "redox_syscall"
 version = "0.1.56"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2439c63f3f6139d1b57529d16bc3b8bb855230c8efcc5d3a896c8bea7c3b1e84"
+
+[[package]]
+name = "slog"
+version = "2.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1cc9c640a4adbfbcc11ffb95efe5aa7af7309e002adab54b185507dbf2377b99"
 
 [[package]]
 name = "syslog"
