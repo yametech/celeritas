@@ -1,3 +1,12 @@
+pub enum Command {
+    String,
+    Set,
+    List,
+    Zset,
+    Hash,
+    // and other
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
