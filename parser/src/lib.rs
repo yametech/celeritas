@@ -214,7 +214,7 @@ impl Parser {
         &mut self.data
     }
 
-    pub fn is_incompletes(&self) -> bool {
+    pub fn is_incomplete(&self) -> bool {
         let data = &(&*self.data)[self.position..self.written];
         match parse(data) {
             Ok(_) => false,
