@@ -9,5 +9,5 @@ edition = "2018"
 [dependencies.logger]
 path = "logger"
 
-[dependencies]
-slog = "2.5.2"
+[dependencies.server]
+path = "server"
