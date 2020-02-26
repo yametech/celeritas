@@ -1,4 +1,4 @@
-pub enum Command {
+pub enum CommandType {
     String,
     Set,
     List,

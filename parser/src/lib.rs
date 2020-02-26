@@ -1,31 +1,8 @@
-extern crate util;
-#[macro_use]
-extern crate lazy_static;
-
 use std::collections::HashMap;
+use std::io;
 use std::iter;
 use std::str::{from_utf8, Utf8Error};
 use util::format_repr;
-
-#[derive(Hash, Eq, PartialEq, Debug)]
-pub enum OperatType {
-    String,
-    Hash,
-    List,
-    Set,
-    SortedSet,
-    HyperLogLog,
-    PubSub,
-}
-
-lazy_static! {
-    pub static ref OPERAT_HASHMAP: HashMap<OperatType, Vec<&'static str>> = {
-        let mut m = HashMap::new();
-        m.insert(OperatType::String, vec!["get", "set", "del"]);
-        m
-    };
-    pub static ref COUNT: usize = OPERAT_HASHMAP.len();
-}
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
@@ -175,68 +152,6 @@ impl<'a> std::fmt::Debug for Command<'a> {
     }
 }
 
-pub struct Parser {
-    data: Vec<u8>,
-    pub position: usize,
-    pub written: usize,
-}
-
-impl Parser {
-    pub fn new() -> Parser {
-        Parser {
-            data: vec![],
-            position: 0,
-            written: 0,
-        }
-    }
-
-    pub fn allocate(&mut self) {
-        if self.position > 0 && self.written == self.position {
-            self.written = 0;
-            self.position = 0;
-        }
-
-        let len = self.data.len();
-        let add = if len == 0 {
-            16
-        } else if self.written * 2 > len {
-            len
-        } else {
-            0
-        };
-
-        if add > 0 {
-            self.data.extend(iter::repeat(0).take(add));
-        }
-    }
-
-    pub fn get_mut(&mut self) -> &mut Vec<u8> {
-        &mut self.data
-    }
-
-    pub fn is_incomplete(&self) -> bool {
-        let data = &(&*self.data)[self.position..self.written];
-        match parse(data) {
-            Ok(_) => false,
-            Err(e) => e.in_complete(),
-        }
-    }
-
-    pub fn next(&mut self) -> Result<Command, ParseError> {
-        let data = &(&*self.data)[self.position..self.written];
-        let (r, len) = parse(data)?;
-        self.position += len;
-        Ok(r)
-    }
-}
-
-impl std::fmt::Debug for Parser {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        f.write_str("Parser: ")?;
-        format_repr(f, &(&*self.data)[self.position..self.written])
-    }
-}
-
 /// Parses the length of the paramenter in the slice
 /// Upon success, it returns a tuple with the length of the argument and the
 /// length of the parsed length.
@@ -279,17 +194,17 @@ fn parse_int(input: &[u8], len: usize, name: &str) -> Result<(Option<usize>, usi
     return Ok((argco, i + 1));
 }
 
-/// Creates a parser from a buffer.
+/// Creates a parser array from a buffer.
 ///
 /// # Examples
 ///
 /// ```
-/// # use parser::parse;
+/// # use parser::parse_array;
 /// let s = b"*3\r\n$3\r\nSET\r\n$5\r\nmykey\r\n$2\r\n10\r\n";
-/// let (parser, len) = parse(s).unwrap();
+/// let (parser, len) = parse_array(s).unwrap();
 /// assert_eq!(len, 32);
 /// ```
-pub fn parse(input: &[u8]) -> Result<(Command, usize), ParseError> {
+pub fn parse_array(input: &[u8]) -> Result<(Command, usize), ParseError> {
     let mut pos = 0;
     while input.len() > pos && input[pos] as char == '\r' {
         if pos + 1 < input.len() {
@@ -360,24 +275,18 @@ pub fn parse(input: &[u8]) -> Result<(Command, usize), ParseError> {
     }
     Ok((Command::new(input, argv), pos))
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_parse() {
         let s = b"*3\r\n$3\r\nset\r\n$2\r\nxy\r\n$2\r\nab\r\n";
-        let (parse, len) = parse(s).unwrap();
+        let (p1, len) = parse_array(s).unwrap();
         assert_eq!(len, 29);
-        assert_eq!(parse.get_str(0).unwrap(), "set");
-        assert_eq!(parse.get_str(1).unwrap(), "xy");
-        assert_eq!(parse.get_str(2).unwrap(), "ab");
-    }
-    #[test]
-    fn test_operat_hashmap() {
-        let r = match OPERAT_HASHMAP.get(&OperatType::String) {
-            Some(_) => 0,
-            None => 1,
-        };
-        assert_eq!(r, 0);
+        assert_eq!(p1.get_str(0).unwrap(), "set");
+        assert_eq!(p1.get_str(1).unwrap(), "xy");
+        assert_eq!(p1.get_str(2).unwrap(), "ab");
     }
 }
