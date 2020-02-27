@@ -198,7 +198,7 @@ pub enum Value {
     Attribute(LinkedHashMap<Value, Value>),
     /// A Push type
     Push(Vec<Value>),
-    // / A stream type
+    // / A streaming long connection transmission
     // Stream(Vec<Value>),
 }
 
