@@ -19,3 +19,5 @@ src/release.rs
 .idea/misc.xml
 .idea/modules.xml
 .idea/vcs.xml
+.idea/.gitignore
+.idea/inspectionProfiles/Project_Default.xml

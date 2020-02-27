@@ -36,13 +36,25 @@ impl<'a> Server<'a> {
 
         Ok(())
     }
-    async fn transfer(mut inbound: TcpStream, proxy_addr: String) -> Result<(), Box<dyn Error>> {
-        let mut outbound = TcpStream::connect(proxy_addr).await?;
-        let (mut ri, mut wi) = inbound.split();
-        let (mut ro, mut wo) = outbound.split();
+    async fn transfer(inbound: TcpStream, proxy_addr: String) -> Result<(), Box<dyn Error>> {
+        let outbound = TcpStream::connect(proxy_addr).await?;
+        let handlers = Handlers(vec![]);
+        Ok(Self::iocopy(inbound, outbound, handlers).await?)
+    }
+
+    async fn iocopy(
+        mut _i: TcpStream,
+        mut _o: TcpStream,
+        _h: Handlers,
+    ) -> Result<(), Box<dyn Error>> {
+        let (mut ri, mut wi) = _i.split();
+        let (mut ro, mut wo) = _o.split();
         let client_to_server = io::copy(&mut ri, &mut wo);
         let server_to_client = io::copy(&mut ro, &mut wi);
+        // handlers.0.iter().map(|h| h(&ri, &wo)).await?;
         try_join(client_to_server, server_to_client).await?;
         Ok(())
     }
 }
+
+struct Handlers(Vec<fn(_input: &mut TcpStream, _output: &mut TcpStream)>);

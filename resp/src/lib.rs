@@ -5,9 +5,10 @@ extern crate parser;
 use linked_hash_map::LinkedHashMap;
 use num_bigint::BigInt;
 use parser::Command;
+use std::fmt::{Error, Write};
 use std::hash::{Hash, Hasher};
 
-pub mod resp_type {
+pub mod resp {
     type RespType = char;
 
     // simple types
@@ -26,11 +27,11 @@ pub mod resp_type {
     // ,<floating-point-number>\r\n
     pub const BOOLEAN: RespType = '#';
     // #t\r\n or #f\r\n
-    pub const BLOBERROR: RespType = '!';
+    pub const BLOB_ERROR: RespType = '!';
     // !<length>\r\n<bytes>\r\n
-    pub const VERBATIMSTRING: RespType = '=';
+    pub const VERBATIM_STRING: RespType = '=';
     // =<length>\r\n<format(3 bytes):><bytes>\r\n
-    pub const BIGNUMBER: RespType = '(';
+    pub const BIG_INT: RespType = '(';
 
     // Aggregate data types
 
@@ -75,7 +76,58 @@ impl Hash for Float64 {
         self.0.hash(state);
     }
 }
+#[derive(Debug)]
+pub struct ValuePair {
+    value: Value,
+    attrs: LinkedHashMap<Value, Value>,
+}
+impl ValuePair {
+    pub fn new(value: Value, attrs: LinkedHashMap<Value, Value>) -> Self {
+        ValuePair { value, attrs }
+    }
 
+    /// to resp string
+    /// ```
+    /// # extern crate num_bigint;
+    /// # use resp::{Value,Float64,ValuePair};
+    /// # use num_bigint::BigInt;
+    /// # use linked_hash_map::LinkedHashMap;
+    ///
+    /// let mut keyPopularityMap = LinkedHashMap::new();
+    /// keyPopularityMap.insert(Value::Blob(b"a".to_vec()),Value::Double(Float64::from(0.1923_f64)));
+    /// keyPopularityMap.insert(Value::Blob(b"b".to_vec()),Value::Double(Float64::from(0.0012_f64)));
+    ///
+    /// let mut attrMap:LinkedHashMap<Value,Value> = LinkedHashMap::new();
+    /// attrMap.insert(Value::String(b"key-popularity".to_vec()),Value::Map(keyPopularityMap));
+    ///
+    /// let vp = ValuePair::new(Value::Array(vec![Value::Number(2039123),Value::Number(9543892)]),attrMap).to_resp_string().unwrap();
+    /// assert_eq!("|1\r\n+key-popularity\r\n%2\r\n$1\r\na\r\n,0.1923\r\n$1\r\nb\r\n,0.0012\r\n*2\r\n:2039123\r\n:9543892\r\n",vp);
+    /// ```
+    pub fn to_resp_string(&self) -> Result<String, std::fmt::Error> {
+        let mut buf = String::new();
+        // check attributes
+        if self.attrs.len() > 0 {
+            buf.write_char(resp::ATTRIBUTE as char)?;
+            buf.write_str(&format!("{}", self.attrs.len()))?;
+            buf.write_str("\r\n")?;
+
+            for item in self.attrs.iter() {
+                let (k, v) = (item.0, item.1);
+                buf.write_str(
+                    std::str::from_utf8(&k.as_bytes()).expect("Key found invalid UTF-8"),
+                )?;
+                buf.write_str(
+                    std::str::from_utf8(&v.as_bytes()).expect("Value found invalid UTF-8"),
+                )?;
+            }
+        }
+        buf.write_str(
+            std::str::from_utf8(&self.value.as_bytes()).expect("Value found invalid UTF-8"),
+        )?;
+
+        Ok(buf)
+    }
+}
 /// A command Value to send to a client
 #[derive(Eq, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Value {
@@ -95,6 +147,8 @@ pub enum Value {
     Boolean(bool),
     /// type BlobError similar to simple string
     BlobError(String),
+    /// VerbatimString =<length>\r\n<format(3 bytes):><bytes>\r\n
+    Verbatimstring(String),
     /// bigint number
     Bigint(BigInt),
 
@@ -122,35 +176,38 @@ impl Value {
     /// # use linked_hash_map::LinkedHashMap;
     ///
     /// let number_value = Value::Number(1);
-    /// assert_eq!(b":1\r\n".to_vec(), number_value.as_bytes(2));
+    /// assert_eq!(b":1\r\n".to_vec(), number_value.as_bytes());
     ///
     /// let blob_value = Value::Blob(b"123".to_vec());
-    /// assert_eq!(b"$3\r\n123\r\n".to_vec(), blob_value.as_bytes(2));
+    /// assert_eq!(b"$3\r\n123\r\n".to_vec(), blob_value.as_bytes());
     ///
     /// let boolean_value = Value::Boolean(true);
-    /// assert_eq!(b"#t\r\n".to_vec(), boolean_value.as_bytes(3));
+    /// assert_eq!(b"#t\r\n".to_vec(), boolean_value.as_bytes());
     ///
     /// let blob_error = Value::BlobError("woca".to_string());
-    /// assert_eq!(b"!4\r\nwoca\r\n".to_vec(), blob_error.as_bytes(3));
+    /// assert_eq!(b"!4\r\nwoca\r\n".to_vec(), blob_error.as_bytes());
     ///
     /// let double_inf_value = Value::Double(Float64::from(std::f64::INFINITY));
-    /// assert_eq!(b",inf\r\n".to_vec(), double_inf_value.as_bytes(3));
+    /// assert_eq!(b",inf\r\n".to_vec(), double_inf_value.as_bytes());
     ///
     /// let double_neg_inf_value = Value::Double(Float64::from(std::f64::NEG_INFINITY));
-    /// assert_eq!(b",-inf\r\n".to_vec(), double_neg_inf_value.as_bytes(3));
+    /// assert_eq!(b",-inf\r\n".to_vec(), double_neg_inf_value.as_bytes());
     ///
     /// let double_value = Value::Double(Float64::from(1.23_f64));
-    /// assert_eq!(b",1.23\r\n".to_vec(), double_value.as_bytes(3));
+    /// assert_eq!(b",1.23\r\n".to_vec(), double_value.as_bytes());
     ///
     /// let bigint_type = BigInt::parse_bytes(b"3492890328409238509324850943850943825024385",10).unwrap();
     /// let bigint_value = Value::Bigint(bigint_type);
-    /// assert_eq!(b"(3492890328409238509324850943850943825024385\r\n".to_vec(), bigint_value.as_bytes(3));
+    /// assert_eq!(b"(3492890328409238509324850943850943825024385\r\n".to_vec(), bigint_value.as_bytes());
+    ///
+    /// let verstring = Value::Verbatimstring("Some string".to_string());
+    /// assert_eq!(b"=11\r\ntxt:Some string\r\n".to_vec(),verstring.as_bytes());
     ///
     /// let mut map = LinkedHashMap::new();
     /// map.insert(Value::String(b"first".to_vec()),Value::Number(1));
     /// map.insert(Value::String(b"second".to_vec()),Value::Number(2));
     /// let value_map = Value::Map(map);
-    /// assert_eq!(b"%2\r\n+first\r\n:1\r\n+second\r\n:2\r\n".to_vec(), value_map.as_bytes(3));
+    /// assert_eq!(b"%2\r\n+first\r\n:1\r\n+second\r\n:2\r\n".to_vec(), value_map.as_bytes());
     ///
     /// let value_set = Value::Set(vec![
     ///         Value::String(b"orange".to_vec()),
@@ -159,7 +216,7 @@ impl Value {
     ///         Value::Number(100),
     ///         Value::Number(999),
     ///     ]);
-    /// assert_eq!(b"~+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n".to_vec(),value_set.as_bytes(3));
+    /// assert_eq!(b"~+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n".to_vec(),value_set.as_bytes());
     ///
     ///
     /// // Attribute type |1\r\n+key-popularity\r\n%2\r\n$1\r\na\r\n,0.1923\r\n$1\r\nb\r\n,0.0012\r\n*2\r\n:2039123\r\n:9543892\r\n
@@ -171,18 +228,12 @@ impl Value {
     ///         Value::String(b"somechannel".to_vec()),
     ///         Value::String(b"this is the message".to_vec()),
     ///     ]);
-    /// assert_eq!(b">4\r\n+pubsub\r\n+message\r\n+somechannel\r\n+this is the message\r\n".to_vec(),push_value.as_bytes(3));
+    /// assert_eq!(b">4\r\n+pubsub\r\n+message\r\n+somechannel\r\n+this is the message\r\n".to_vec(),push_value.as_bytes());
     /// ```
     /// Serializes the value into an array of bytes using Redis protocol.
-    pub fn as_bytes(&self, resp_version: usize) -> Vec<u8> {
+    pub fn as_bytes(&self) -> Vec<u8> {
         return match *self {
-            Value::Null => {
-                if resp_version == 2 {
-                    [&b"-1"[..], &"\r\n".to_owned().into_bytes()[..]].concat()
-                } else {
-                    [&b"_"[..], &"\r\n".to_owned().into_bytes()[..]].concat()
-                }
-            }
+            Value::Null => [&b"_"[..], &"\r\n".to_owned().into_bytes()[..]].concat(),
 
             Value::String(ref s) => {
                 [&b"+"[..], &s[..], &"\r\n".to_owned().into_bytes()[..]].concat()
@@ -198,31 +249,17 @@ impl Value {
 
             Value::Number(ref i) => [&b":"[..], &format!("{}\r\n", i).into_bytes()[..]].concat(),
 
-            Value::Error(ref d) => {
-                if resp_version == 2 {
-                    [
-                        &b"-"[..],
-                        (*d).as_bytes(),
-                        &"\r\n".to_owned().into_bytes()[..],
-                    ]
-                    .concat()
-                } else {
-                    [
-                        &b"!"[..],
-                        (*d).as_bytes(),
-                        &"\r\n".to_owned().into_bytes()[..],
-                    ]
-                    .concat()
-                }
-            }
+            Value::Error(ref d) => [
+                &b"-"[..],
+                (*d).as_bytes(),
+                &"\r\n".to_owned().into_bytes()[..],
+            ]
+            .concat(),
 
             Value::Array(ref a) => [
                 &b"*"[..],
                 &format!("{}\r\n", a.len()).into_bytes()[..],
-                &(a.iter()
-                    .map(|el| el.as_bytes(resp_version))
-                    .collect::<Vec<_>>()[..]
-                    .concat())[..],
+                &(a.iter().map(|el| el.as_bytes()).collect::<Vec<_>>()[..].concat())[..],
             ]
             .concat(),
 
@@ -261,15 +298,22 @@ impl Value {
             ]
             .concat(),
 
+            Value::Verbatimstring(ref s) => [
+                &b"="[..],
+                &format!("{}\r\n", s.len()).into_bytes()[..],
+                &format!("txt:{}\r\n", &s[..]).into_bytes()[..],
+            ]
+            .concat(),
+
             Value::Bigint(ref b) => [&b"("[..], &format!("{}\r\n", &b).into_bytes()[..]].concat(),
 
             Value::Map(ref m) => {
                 let mut content: Vec<u8> = Vec::new();
                 for x in m.iter() {
-                    for k in x.0.as_bytes(resp_version).iter() {
+                    for k in x.0.as_bytes().iter() {
                         content.push(*k);
                     }
-                    for v in x.1.as_bytes(resp_version).iter() {
+                    for v in x.1.as_bytes().iter() {
                         content.push(*v);
                     }
                 }
@@ -284,7 +328,7 @@ impl Value {
             Value::Set(ref v) => {
                 let mut content: Vec<u8> = Vec::new();
                 for x in v.iter() {
-                    for c in x.as_bytes(resp_version).iter() {
+                    for c in x.as_bytes().iter() {
                         content.push(*c);
                     }
                 }
@@ -294,10 +338,10 @@ impl Value {
             Value::Attribute(ref m) => {
                 let mut content: Vec<u8> = Vec::new();
                 for x in m.iter() {
-                    for k in x.0.as_bytes(resp_version).iter() {
+                    for k in x.0.as_bytes().iter() {
                         content.push(*k);
                     }
-                    for v in x.1.as_bytes(resp_version).iter() {
+                    for v in x.1.as_bytes().iter() {
                         content.push(*v);
                     }
                 }
@@ -312,7 +356,7 @@ impl Value {
             Value::Push(ref a) => {
                 let mut content: Vec<u8> = Vec::new();
                 for i in a.iter() {
-                    for x in i.as_bytes(resp_version).iter() {
+                    for x in i.as_bytes().iter() {
                         content.push(*x);
                     }
                 }
@@ -352,18 +396,38 @@ impl Value {
             false
         }
     }
+    /// get type literal
+    fn get_char(&self) -> char {
+        return match *self {
+            Value::Blob(_) => resp::BLOB_STRING,
+            Value::String(_) => resp::SIMPLE_STRING,
+            Value::Error(_) => resp::SIMPLE_ERROR,
+            Value::Number(_) => resp::NUMBER,
+            Value::Null => resp::NULL,
+            Value::Double(_) => resp::DOUBLE,
+            Value::Boolean(_) => resp::BOOLEAN,
+            Value::BlobError(_) => resp::BLOB_ERROR,
+            Value::Verbatimstring(_) => resp::VERBATIM_STRING,
+            Value::Bigint(_) => resp::BIG_INT,
+            Value::Array(_) => resp::ARRAY,
+            Value::Map(_) => resp::MAP,
+            Value::Set(_) => resp::SET,
+            Value::Attribute(_) => resp::ATTRIBUTE,
+            Value::Push(_) => resp::PUSH,
+        };
+    }
 }
 
 /// convert from Parser :: Command to Value
 impl From<Command<'_>> for Value {
-    fn from(c: Command) -> Self {
+    fn from(_: Command) -> Self {
         Value::Null {}
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    // use super::*;
 
     #[test]
     fn it_works() {
