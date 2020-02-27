@@ -5,14 +5,18 @@ extern crate parser;
 use linked_hash_map::LinkedHashMap;
 use num_bigint::BigInt;
 use parser::Command;
-use std::fmt::{Error, Write};
+use std::fmt::Write;
 use std::hash::{Hash, Hasher};
+
+/// Need automatic matching $expr to generate ValuePair::new()
+// macro_rules! value {
+//     () => {};
+// }
 
 pub mod resp {
     type RespType = char;
 
     // simple types
-
     pub const BLOB_STRING: RespType = '$';
     // $<length>\r\n<bytes>\r\n
     pub const SIMPLE_STRING: RespType = '+';
@@ -85,7 +89,6 @@ impl ValuePair {
     pub fn new(value: Value, attrs: LinkedHashMap<Value, Value>) -> Self {
         ValuePair { value, attrs }
     }
-
     /// to resp string
     /// ```
     /// # extern crate num_bigint;
@@ -93,6 +96,7 @@ impl ValuePair {
     /// # use num_bigint::BigInt;
     /// # use linked_hash_map::LinkedHashMap;
     ///
+    /// // Array + Attribute
     /// let mut keyPopularityMap = LinkedHashMap::new();
     /// keyPopularityMap.insert(Value::Blob(b"a".to_vec()),Value::Double(Float64::from(0.1923_f64)));
     /// keyPopularityMap.insert(Value::Blob(b"b".to_vec()),Value::Double(Float64::from(0.0012_f64)));
@@ -102,6 +106,38 @@ impl ValuePair {
     ///
     /// let vp = ValuePair::new(Value::Array(vec![Value::Number(2039123),Value::Number(9543892)]),attrMap).to_resp_string().unwrap();
     /// assert_eq!("|1\r\n+key-popularity\r\n%2\r\n$1\r\na\r\n,0.1923\r\n$1\r\nb\r\n,0.0012\r\n*2\r\n:2039123\r\n:9543892\r\n",vp);
+    ///
+    /// // Bulk
+    /// let vp2 = ValuePair::new(
+    ///       Value::Array(vec![
+    ///       Value::Blob(b"set".to_vec()),
+    ///       Value::Blob(b"a".to_vec()),
+    ///       Value::Blob(b"123".to_vec())]),
+    ///     LinkedHashMap::new()).
+    ///     to_resp_string().
+    ///     unwrap();
+    /// assert_eq!("*3\r\n$3\r\nset\r\n$1\r\na\r\n$3\r\n123\r\n",vp2);
+    ///
+    /// // Simple
+    /// let vp3 = ValuePair::new(Value::String(b"FULLRESYNC 6344847b8f323346bcd72a64a9d8a1a47a6b1249 18004".to_vec()),
+    ///      LinkedHashMap::new()).
+    ///     to_resp_string().
+    ///     unwrap();
+    /// assert_eq!("+FULLRESYNC 6344847b8f323346bcd72a64a9d8a1a47a6b1249 18004\r\n",vp3);
+    ///
+    /// // Map
+    /// let mut map = LinkedHashMap::new();
+    /// map.insert(
+    ///         Value::Blob(b"I am key".to_vec()),
+    ///          Value::Array(vec![
+    ///             Value::Blob(b"I".to_vec()),
+    ///             Value::Blob(b"am".to_vec()),
+    ///             Value::Blob(b"Value".to_vec())]));
+    /// let vp4 = ValuePair::new(
+    ///     Value::Map(map),
+    ///     LinkedHashMap::new(),
+    ///     ).to_resp_string().unwrap();
+    /// assert_eq!("%1\r\n$8\r\nI am key\r\n*3\r\n$1\r\nI\r\n$2\r\nam\r\n$5\r\nValue\r\n",vp4);
     /// ```
     pub fn to_resp_string(&self) -> Result<String, std::fmt::Error> {
         let mut buf = String::new();
@@ -218,8 +254,6 @@ impl Value {
     ///     ]);
     /// assert_eq!(b"~+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n".to_vec(),value_set.as_bytes());
     ///
-    ///
-    /// // Attribute type |1\r\n+key-popularity\r\n%2\r\n$1\r\na\r\n,0.1923\r\n$1\r\nb\r\n,0.0012\r\n*2\r\n:2039123\r\n:9543892\r\n
     ///
     /// let push_value = Value::Push(
     ///     vec![
