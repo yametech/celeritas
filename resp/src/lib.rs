@@ -1,10 +1,8 @@
 extern crate linked_hash_map;
 extern crate num_bigint;
-extern crate parser;
 
 use linked_hash_map::LinkedHashMap;
 use num_bigint::BigInt;
-use parser::Command;
 use std::fmt::Write;
 use std::hash::{Hash, Hasher};
 
@@ -13,42 +11,40 @@ use std::hash::{Hash, Hasher};
 //     () => {};
 // }
 
-pub mod resp {
-    type RespType = char;
-
+pub mod resp_type {
     // simple types
-    pub const BLOB_STRING: RespType = '$';
+    pub const BLOB_STRING: char = '$';
     // $<length>\r\n<bytes>\r\n
-    pub const SIMPLE_STRING: RespType = '+';
+    pub const SIMPLE_STRING: char = '+';
     // +<string>\r\n
-    pub const SIMPLE_ERROR: RespType = '-';
+    pub const SIMPLE_ERROR: char = '-';
     // -<string>\r\n
-    pub const NUMBER: RespType = ':';
+    pub const NUMBER: char = ':';
     // :<number>\r\n
-    pub const NULL: RespType = '_';
+    pub const NULL: char = '_';
     // _\r\n  resp2: -1\r\n
-    pub const DOUBLE: RespType = ',';
+    pub const DOUBLE: char = ',';
     // ,<floating-point-number>\r\n
-    pub const BOOLEAN: RespType = '#';
+    pub const BOOLEAN: char = '#';
     // #t\r\n or #f\r\n
-    pub const BLOB_ERROR: RespType = '!';
+    pub const BLOB_ERROR: char = '!';
     // !<length>\r\n<bytes>\r\n
-    pub const VERBATIM_STRING: RespType = '=';
+    pub const VERBATIM_STRING: char = '=';
     // =<length>\r\n<format(3 bytes):><bytes>\r\n
-    pub const BIG_INT: RespType = '(';
+    pub const BIG_INT: char = '(';
 
     // Aggregate data types
 
     // (<big number>\n
-    pub const ARRAY: RespType = '*';
+    pub const ARRAY: char = '*';
     // *<elements number>\r\n... numelements other types ...
-    pub const MAP: RespType = '%';
+    pub const MAP: char = '%';
     // %<elements number>\r\n... numelements key/value pair of other types ...
-    pub const SET: RespType = '~';
+    pub const SET: char = '~';
     // ~<elements number>\r\n... numelements other types ...
-    pub const ATTRIBUTE: RespType = '|';
+    pub const ATTRIBUTE: char = '|';
     // |~<elements number>\r\n... numelements map type ...
-    pub const PUSH: RespType = '>';
+    pub const PUSH: char = '>';
     // ><elements number>\r\n<first item is String>\r\n... numelements-1 other types ...
 
     //special type
@@ -143,7 +139,7 @@ impl ValuePair {
         let mut buf = String::new();
         // check attributes
         if self.attrs.len() > 0 {
-            buf.write_char(resp::ATTRIBUTE as char)?;
+            buf.write_char(resp_type::ATTRIBUTE as char)?;
             buf.write_str(&format!("{}", self.attrs.len()))?;
             buf.write_str("\r\n")?;
 
@@ -433,29 +429,22 @@ impl Value {
     /// get type literal
     fn get_char(&self) -> char {
         return match *self {
-            Value::Blob(_) => resp::BLOB_STRING,
-            Value::String(_) => resp::SIMPLE_STRING,
-            Value::Error(_) => resp::SIMPLE_ERROR,
-            Value::Number(_) => resp::NUMBER,
-            Value::Null => resp::NULL,
-            Value::Double(_) => resp::DOUBLE,
-            Value::Boolean(_) => resp::BOOLEAN,
-            Value::BlobError(_) => resp::BLOB_ERROR,
-            Value::Verbatimstring(_) => resp::VERBATIM_STRING,
-            Value::Bigint(_) => resp::BIG_INT,
-            Value::Array(_) => resp::ARRAY,
-            Value::Map(_) => resp::MAP,
-            Value::Set(_) => resp::SET,
-            Value::Attribute(_) => resp::ATTRIBUTE,
-            Value::Push(_) => resp::PUSH,
+            Value::Blob(_) => resp_type::BLOB_STRING,
+            Value::String(_) => resp_type::SIMPLE_STRING,
+            Value::Error(_) => resp_type::SIMPLE_ERROR,
+            Value::Number(_) => resp_type::NUMBER,
+            Value::Null => resp_type::NULL,
+            Value::Double(_) => resp_type::DOUBLE,
+            Value::Boolean(_) => resp_type::BOOLEAN,
+            Value::BlobError(_) => resp_type::BLOB_ERROR,
+            Value::Verbatimstring(_) => resp_type::VERBATIM_STRING,
+            Value::Bigint(_) => resp_type::BIG_INT,
+            Value::Array(_) => resp_type::ARRAY,
+            Value::Map(_) => resp_type::MAP,
+            Value::Set(_) => resp_type::SET,
+            Value::Attribute(_) => resp_type::ATTRIBUTE,
+            Value::Push(_) => resp_type::PUSH,
         };
-    }
-}
-
-/// convert from Parser :: Command to Value
-impl From<Command<'_>> for Value {
-    fn from(_: Command) -> Self {
-        Value::Null {}
     }
 }
 

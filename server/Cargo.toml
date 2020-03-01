@@ -13,3 +13,8 @@ tokio-core = { version = "0.1" }
 tokio-io = { version = "0.1"}
 tokio-util = { version = "0.2", features = ["full"] }
 
+[dependencies.parser]
+path = "../parser"
+
+[dependencies.resp]
+path = "../resp"
