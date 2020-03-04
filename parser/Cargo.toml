@@ -18,3 +18,4 @@ tokio-core = { version = "0.1" }
 tokio-io = { version = "0.1" }
 tokio-util = { version = "0.2", features = ["full"] }
 bytes = { version = "0.5", features = ["serde"] }
+linked-hash-map = "0.5"

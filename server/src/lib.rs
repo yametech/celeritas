@@ -1,8 +1,8 @@
 use futures::future::try_join;
 use futures::FutureExt;
 
-use parser::Command;
-use resp::{Value, ValuePair};
+// use parser::Command;
+// use resp::{Value, ValuePair};
 use std::error::Error;
 
 use tokio::net::{TcpListener, TcpStream};
@@ -69,10 +69,10 @@ impl<'a> Server<'a> {
         //         };
         //     }
         // };
-        // let client_to_server = io::copy(&mut ri, &mut wo);
-        // let server_to_client = io::copy(&mut ro, &mut wi);
+        let client_to_server = io::copy(&mut ri, &mut wo);
+        let server_to_client = io::copy(&mut ro, &mut wi);
         // handlers.0.iter().map(|h| h(&ri, &wo)).await?;
-        // try_join(client_to_server, server_to_client).await?;
+        try_join(client_to_server, server_to_client).await?;
         Ok(())
     }
 }

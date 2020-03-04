@@ -11,7 +11,7 @@ use std::hash::{Hash, Hasher};
 //     () => {};
 // }
 
-pub mod resp_type {
+pub mod resp_event_type {
     // simple types
     pub const BLOB_STRING: char = '$';
     // $<length>\r\n<bytes>\r\n
@@ -139,7 +139,7 @@ impl ValuePair {
         let mut buf = String::new();
         // check attributes
         if self.attrs.len() > 0 {
-            buf.write_char(resp_type::ATTRIBUTE as char)?;
+            buf.write_char(resp_event_type::ATTRIBUTE as char)?;
             buf.write_str(&format!("{}", self.attrs.len()))?;
             buf.write_str("\r\n")?;
 
@@ -429,21 +429,21 @@ impl Value {
     /// get type literal
     fn get_char(&self) -> char {
         return match *self {
-            Value::Blob(_) => resp_type::BLOB_STRING,
-            Value::String(_) => resp_type::SIMPLE_STRING,
-            Value::Error(_) => resp_type::SIMPLE_ERROR,
-            Value::Number(_) => resp_type::NUMBER,
-            Value::Null => resp_type::NULL,
-            Value::Double(_) => resp_type::DOUBLE,
-            Value::Boolean(_) => resp_type::BOOLEAN,
-            Value::BlobError(_) => resp_type::BLOB_ERROR,
-            Value::Verbatimstring(_) => resp_type::VERBATIM_STRING,
-            Value::Bigint(_) => resp_type::BIG_INT,
-            Value::Array(_) => resp_type::ARRAY,
-            Value::Map(_) => resp_type::MAP,
-            Value::Set(_) => resp_type::SET,
-            Value::Attribute(_) => resp_type::ATTRIBUTE,
-            Value::Push(_) => resp_type::PUSH,
+            Value::Blob(_) => resp_event_type::BLOB_STRING,
+            Value::String(_) => resp_event_type::SIMPLE_STRING,
+            Value::Error(_) => resp_event_type::SIMPLE_ERROR,
+            Value::Number(_) => resp_event_type::NUMBER,
+            Value::Null => resp_event_type::NULL,
+            Value::Double(_) => resp_event_type::DOUBLE,
+            Value::Boolean(_) => resp_event_type::BOOLEAN,
+            Value::BlobError(_) => resp_event_type::BLOB_ERROR,
+            Value::Verbatimstring(_) => resp_event_type::VERBATIM_STRING,
+            Value::Bigint(_) => resp_event_type::BIG_INT,
+            Value::Array(_) => resp_event_type::ARRAY,
+            Value::Map(_) => resp_event_type::MAP,
+            Value::Set(_) => resp_event_type::SET,
+            Value::Attribute(_) => resp_event_type::ATTRIBUTE,
+            Value::Push(_) => resp_event_type::PUSH,
         };
     }
 }

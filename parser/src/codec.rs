@@ -30,6 +30,15 @@ impl Decoder for RedisCodec {
     type Item = Value;
     type Error = ParseError;
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        Ok(Some(Value::Null))
+        let byte = src[0];
+        let value = match byte as char {
+            resp_event_type::BLOB_STRING => {
+                self.buffer.push(byte);
+                Some(Value::String(self.buffer.to_vec()))
+            }
+            _ => None,
+        };
+
+        Ok(value)
     }
 }

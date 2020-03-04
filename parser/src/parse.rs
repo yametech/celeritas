@@ -1,4 +1,167 @@
 use super::*;
+use linked_hash_map::LinkedHashMap;
+use std::error::Error;
+use std::io::{self, BufReader, Read};
+
+pub struct Parser<T> {
+    reader: T,
+}
+
+impl<'a, T: Read> Parser<T> {
+    /// Creates a new parser that parses the data behind the reader.  More
+    /// than one value can be behind the reader in which case the parser can
+    /// be invoked multiple times.  In other words: the stream does not have
+    /// to be terminated.
+    pub fn new(reader: T) -> Parser<T> {
+        Parser { reader: reader }
+    }
+
+    /// parses a single value out of the stream.  If there are multiple
+    /// values you can call this multiple times.  If the reader is not yet
+    /// ready this will block.
+    pub fn parse_value(&mut self) -> Result<Value, ParseError> {
+        let b = self.read_byte()?;
+        match b as char {
+            '+' => self.parse_simple_string(),
+            ':' => self.parse_int(),
+            '$' => self.parse_blob(),
+            '*' => self.parse_array(),
+            '-' => self.parse_error(),
+            '_' => self.parse_null(),
+            _ => Err(ParseError::InvalidArgument),
+        }
+    }
+
+    #[inline]
+    fn expect_char(&mut self, refchar: char) -> Result<(), ParseError> {
+        if self.read_byte().unwrap() as char == refchar {
+            Ok(())
+        } else {
+            Err(ParseError::Incomplete)
+        }
+    }
+
+    #[inline]
+    fn expect_newline(&mut self) -> Result<(), ParseError> {
+        match self.read_byte().unwrap() as char {
+            '\n' => Ok(()),
+            '\r' => self.expect_char('\n'),
+            _ => Err(ParseError::Incomplete),
+        }
+    }
+
+    fn read_byte(&mut self) -> Result<u8, ParseError> {
+        let buf: &mut [u8; 1] = &mut [0];
+        let nread = self.reader.read(buf)?;
+
+        if nread < 1 {
+            return Err(ParseError::from(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "would block",
+            )));
+        } else {
+            Ok(buf[0])
+        }
+    }
+
+    fn read_string_line(&mut self) -> Result<String, ParseError> {
+        match String::from_utf8(self.read_line().unwrap()) {
+            Err(_) => Err(ParseError::Incomplete),
+            Ok(value) => Ok(value),
+        }
+    }
+
+    fn read_line(&mut self) -> Result<Vec<u8>, ParseError> {
+        let mut rv = vec![];
+        loop {
+            let b = self.read_byte()?;
+            match b as char {
+                '\n' => {
+                    break;
+                }
+                '\r' => {
+                    self.expect_char('\n')?;
+                    break;
+                }
+                _ => rv.push(b),
+            };
+        }
+
+        Ok(rv)
+    }
+
+    fn read_int_line(&mut self) -> Result<i64, ParseError> {
+        let line = self.read_string_line()?;
+        match line.trim().parse::<i64>() {
+            Err(_) => Err(ParseError::from("Expected integer, got garbage")),
+            Ok(value) => Ok(value),
+        }
+    }
+
+    fn parse_blob(&mut self) -> Result<Value, ParseError> {
+        Ok(Value::String(self.read_string_line()?.as_bytes().to_vec()))
+    }
+
+    fn parse_int(&mut self) -> Result<Value, ParseError> {
+        Ok(Value::Number(self.read_int_line()?))
+    }
+
+    fn parse_simple_string(&mut self) -> Result<Value, ParseError> {
+        Ok(Value::String(self.read_string_line()?.as_bytes().to_vec()))
+    }
+
+    fn parse_array(&mut self) -> Result<Value, ParseError> {
+        let length = self.read_int_line()?;
+        let mut rv = vec![];
+        rv.reserve(length as usize);
+        for _ in 0..length {
+            rv.push(self.parse_value()?);
+        }
+        Ok(Value::Array(rv))
+    }
+
+    fn parse_map(&mut self) -> Result<Value, ParseError> {
+        let length = self.read_int_line()?;
+        let mut map = LinkedHashMap::<Value, Value>::new();
+        for _ in 0..length {
+            let key = self.parse_value()?;
+            let value = self.parse_value()?;
+            map.insert(key, value);
+        }
+        Ok(Value::Map(map))
+    }
+
+    fn parse_big_int(&mut self) -> Result<Value, ParseError> {
+        Ok(self.parse_int()?)
+    }
+
+    fn parse_error(&mut self) -> Result<Value, ParseError> {
+        Ok(Value::Error(self.read_string_line()?))
+    }
+
+    fn parse_null(&mut self) -> Result<Value, ParseError> {
+        Ok(Value::Null)
+    }
+
+    fn parse_double(&mut self) -> Result<Value, ParseError> {
+        match self.read_string_line()?.trim().parse::<f64>() {
+            Ok(value) => Ok(Value::Double(Float64::from(value))),
+            Err(_) => Err(ParseError::InvalidArgument),
+        }
+    }
+
+    fn parse_boolean(&mut self) -> Result<Value, ParseError> {
+        let line = self.read_string_line()?;
+        if line.len() != 1 {
+            return Err(ParseError::InvalidArgument);
+        }
+        Ok(if line.as_bytes()[0] as char == 't' {
+            Value::Boolean(true)
+        } else {
+            Value::Boolean(false)
+        })
+    }
+}
 
 /// Parses the length of the paramenter in the slice
 /// Upon success, it returns a tuple with the length of the argument and the

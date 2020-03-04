@@ -1,5 +1,5 @@
 extern crate resp;
-use resp::{resp_type, Value, ValuePair};
+use resp::{resp_event_type, Float64, Value, ValuePair};
 
 mod codec;
 mod command;
