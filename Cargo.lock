@@ -42,7 +42,6 @@ name = "celeritas"
 version = "0.1.0"
 dependencies = [
  "logger 0.1.0",
- "parser 0.1.0",
  "server 0.1.0",
 ]
 

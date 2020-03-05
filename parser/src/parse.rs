@@ -29,8 +29,10 @@ impl<'a, T: Read> Parser<T> {
             '-' => self.parse_error(),
             '_' => self.parse_null(),
             '%' => self.parse_map(),
-            '~' => self.parse_array(), // set
+            '~' => self.parse_set(),
             '(' => self.parse_bigint(),
+            '#' => self.parse_boolean(),
+            ',' => self.parse_double(),
             _ => Err(ParseError::InvalidArgument),
         }
     }
@@ -152,6 +154,17 @@ impl<'a, T: Read> Parser<T> {
             map.insert(key, value);
         }
         Ok(Value::Map(map))
+    }
+
+    fn parse_set(&mut self) -> Result<Value, ParseError> {
+        let length = self.read_int_line()? as usize;
+        let mut rv = vec![];
+        rv.reserve(length);
+        for _ in 0..length {
+            let v = self.parse_value()?;
+            rv.push(v);
+        }
+        Ok(Value::Set(rv))
     }
 
     fn parse_bigint(&mut self) -> Result<Value, ParseError> {

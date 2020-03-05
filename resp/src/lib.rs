@@ -251,7 +251,7 @@ impl Value {
     ///         Value::Number(100),
     ///         Value::Number(999),
     ///     ]);
-    /// assert_eq!(b"~+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n".to_vec(),value_set.as_bytes());
+    /// assert_eq!(b"~5\r\n+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n".to_vec(),value_set.as_bytes());
     ///
     ///
     /// let push_value = Value::Push(
@@ -278,7 +278,7 @@ impl Value {
                 &d[..],
                 &"\r\n".to_owned().into_bytes()[..],
             ]
-                .concat(),
+            .concat(),
 
             Value::Number(ref i) => [&b":"[..], &format!("{}\r\n", i).into_bytes()[..]].concat(),
 
@@ -287,14 +287,14 @@ impl Value {
                 (*d).as_bytes(),
                 &"\r\n".to_owned().into_bytes()[..],
             ]
-                .concat(),
+            .concat(),
 
             Value::Array(ref a) => [
                 &b"*"[..],
                 &format!("{}\r\n", a.len()).into_bytes()[..],
                 &(a.iter().map(|el| el.as_bytes()).collect::<Vec<_>>()[..].concat())[..],
             ]
-                .concat(),
+            .concat(),
 
             Value::Double(ref f) => {
                 let prefix = &b","[..];
@@ -329,14 +329,14 @@ impl Value {
                 (*s).as_bytes(),
                 &"\r\n".to_owned().into_bytes()[..],
             ]
-                .concat(),
+            .concat(),
 
             Value::Verbatimstring(ref s) => [
                 &b"="[..],
                 &format!("{}\r\n", s.len()).into_bytes()[..],
                 &format!("txt:{}\r\n", &s[..]).into_bytes()[..],
             ]
-                .concat(),
+            .concat(),
 
             Value::Bigint(ref b) => [&b"("[..], &format!("{}\r\n", &b).into_bytes()[..]].concat(),
 
@@ -355,7 +355,7 @@ impl Value {
                     &format!("{}\r\n", m.len()).into_bytes()[..],
                     &content[..],
                 ]
-                    .concat()
+                .concat()
             }
 
             Value::Set(ref v) => {
@@ -365,7 +365,12 @@ impl Value {
                         content.push(*c);
                     }
                 }
-                [&b"~"[..], &content[..]].concat()
+                [
+                    &b"~"[..],
+                    &format!("{:?}\r\n", v.len()).into_bytes()[..],
+                    &content[..],
+                ]
+                .concat()
             }
 
             Value::Attribute(ref m) => {
@@ -383,7 +388,7 @@ impl Value {
                     &format!("{}\r\n", m.len()).into_bytes()[..],
                     &content[..],
                 ]
-                    .concat()
+                .concat()
             }
 
             Value::Push(ref a) => {
@@ -398,7 +403,7 @@ impl Value {
                     &format!("{}\r\n", a.len()).into_bytes()[..],
                     &content[..],
                 ]
-                    .concat()
+                .concat()
             }
         };
     }

@@ -26,7 +26,7 @@ mod tests {
     }
 
     #[test]
-    fn _test_map() {
+    fn roundtrip_test_map() {
         let map = b"%2\r\n+first\r\n:1\r\n+second\r\n:2\r\n";
         assert_eq!(
             parse_redis_value(&map[..]).unwrap().as_bytes(),
@@ -34,8 +34,18 @@ mod tests {
         );
     }
 
-    fn _tset_set() {
-        let set = b"~+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n(3492890328409238509324850943850943825024385\r\n";
+    #[test]
+    fn roundtrip_tset_set() {
+        let set = b"~5\r\n+orange\r\n+apple\r\n#t\r\n:100\r\n:999\r\n";
+        assert_eq!(
+            parse_redis_value(&set[..]).unwrap().as_bytes(),
+            set.to_vec()
+        );
+    }
+
+    #[test]
+    fn roundtrip_test_all_base_type() {
+        let set = b"~6\r\n+orange\r\n#t\r\n:1111\r\n(321328139271389216321689\r\n,1.23\r\n~1\r\n*3\r\n$3\r\nset\r\n$1\r\na\r\n$1\r\n1\r\n";
         assert_eq!(
             parse_redis_value(&set[..]).unwrap().as_bytes(),
             set.to_vec()
