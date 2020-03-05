@@ -76,11 +76,13 @@ impl Hash for Float64 {
         self.0.hash(state);
     }
 }
+
 #[derive(Debug)]
 pub struct ValuePair {
     value: Value,
     attrs: LinkedHashMap<Value, Value>,
 }
+
 impl ValuePair {
     pub fn new(value: Value, attrs: LinkedHashMap<Value, Value>) -> Self {
         ValuePair { value, attrs }
@@ -160,6 +162,7 @@ impl ValuePair {
         Ok(buf)
     }
 }
+
 /// A command Value to send to a client
 #[derive(Eq, Hash, PartialOrd, PartialEq, Debug)]
 pub enum Value {
@@ -275,7 +278,7 @@ impl Value {
                 &d[..],
                 &"\r\n".to_owned().into_bytes()[..],
             ]
-            .concat(),
+                .concat(),
 
             Value::Number(ref i) => [&b":"[..], &format!("{}\r\n", i).into_bytes()[..]].concat(),
 
@@ -284,14 +287,14 @@ impl Value {
                 (*d).as_bytes(),
                 &"\r\n".to_owned().into_bytes()[..],
             ]
-            .concat(),
+                .concat(),
 
             Value::Array(ref a) => [
                 &b"*"[..],
                 &format!("{}\r\n", a.len()).into_bytes()[..],
                 &(a.iter().map(|el| el.as_bytes()).collect::<Vec<_>>()[..].concat())[..],
             ]
-            .concat(),
+                .concat(),
 
             Value::Double(ref f) => {
                 let prefix = &b","[..];
@@ -326,14 +329,14 @@ impl Value {
                 (*s).as_bytes(),
                 &"\r\n".to_owned().into_bytes()[..],
             ]
-            .concat(),
+                .concat(),
 
             Value::Verbatimstring(ref s) => [
                 &b"="[..],
                 &format!("{}\r\n", s.len()).into_bytes()[..],
                 &format!("txt:{}\r\n", &s[..]).into_bytes()[..],
             ]
-            .concat(),
+                .concat(),
 
             Value::Bigint(ref b) => [&b"("[..], &format!("{}\r\n", &b).into_bytes()[..]].concat(),
 
@@ -352,7 +355,7 @@ impl Value {
                     &format!("{}\r\n", m.len()).into_bytes()[..],
                     &content[..],
                 ]
-                .concat()
+                    .concat()
             }
 
             Value::Set(ref v) => {
@@ -380,7 +383,7 @@ impl Value {
                     &format!("{}\r\n", m.len()).into_bytes()[..],
                     &content[..],
                 ]
-                .concat()
+                    .concat()
             }
 
             Value::Push(ref a) => {
@@ -395,7 +398,7 @@ impl Value {
                     &format!("{}\r\n", a.len()).into_bytes()[..],
                     &content[..],
                 ]
-                .concat()
+                    .concat()
             }
         };
     }
@@ -427,7 +430,7 @@ impl Value {
         }
     }
     /// get type literal
-    fn get_char(&self) -> char {
+    pub fn get_char(&self) -> char {
         return match *self {
             Value::Blob(_) => resp_event_type::BLOB_STRING,
             Value::String(_) => resp_event_type::SIMPLE_STRING,

@@ -5,9 +5,11 @@ authors = ["laik <laik.lj@me.com>"]
 edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies.logger]
 path = "logger"
 
 [dependencies.server]
 path = "server"
+
+[dependencies.parser]
+path = "parser"

@@ -21,7 +21,7 @@ impl RedisCodec {
 impl Encoder for RedisCodec {
     type Item = Value;
     type Error = ParseError;
-    fn encode(&mut self, event: Value, buf: &mut BytesMut) -> Result<(), Self::Error> {
+    fn encode(&mut self, _event: Value, _buf: &mut BytesMut) -> Result<(), Self::Error> {
         Ok(())
     }
 }

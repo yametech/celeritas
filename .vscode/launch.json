@@ -8,7 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Launch",
-            "program": "${workspaceFolder}/target/debug/celeritas",
+            "program": "${workspaceFolder}/debug/celeritas",
             "args": [],
             "cwd": "${workspaceFolder}"
         }

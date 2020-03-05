@@ -1,6 +1,6 @@
 use super::*;
+
 use linked_hash_map::LinkedHashMap;
-use std::error::Error;
 use std::io::{self, BufReader, Read};
 
 pub struct Parser<T> {
@@ -28,6 +28,9 @@ impl<'a, T: Read> Parser<T> {
             '*' => self.parse_array(),
             '-' => self.parse_error(),
             '_' => self.parse_null(),
+            '%' => self.parse_map(),
+            '~' => self.parse_array(), // set
+            '(' => self.parse_bigint(),
             _ => Err(ParseError::InvalidArgument),
         }
     }
@@ -65,7 +68,7 @@ impl<'a, T: Read> Parser<T> {
     }
 
     fn read_string_line(&mut self) -> Result<String, ParseError> {
-        match String::from_utf8(self.read_line().unwrap()) {
+        match String::from_utf8(self.read_line()?) {
             Err(_) => Err(ParseError::Incomplete),
             Ok(value) => Ok(value),
         }
@@ -86,20 +89,39 @@ impl<'a, T: Read> Parser<T> {
                 _ => rv.push(b),
             };
         }
-
         Ok(rv)
     }
 
     fn read_int_line(&mut self) -> Result<i64, ParseError> {
         let line = self.read_string_line()?;
         match line.trim().parse::<i64>() {
-            Err(_) => Err(ParseError::from("Expected integer, got garbage")),
+            Err(_) => Err(ParseError::from("Expected int line integer, got garbage")),
             Ok(value) => Ok(value),
         }
     }
 
+    fn read(&mut self, bytes: usize) -> Result<Vec<u8>, ParseError> {
+        let mut rv = vec![0; bytes];
+        let mut i = 0;
+        while i < bytes {
+            let res_nread = {
+                let ref mut buf = &mut rv[i..];
+                self.reader.read(buf)
+            };
+            match res_nread {
+                Ok(nread) if nread > 0 => i += nread,
+                Ok(_) => return Err(ParseError::from("Could not read enough bytes")),
+                Err(e) => return Err(From::from(e)),
+            }
+        }
+        Ok(rv)
+    }
+
     fn parse_blob(&mut self) -> Result<Value, ParseError> {
-        Ok(Value::String(self.read_string_line()?.as_bytes().to_vec()))
+        let bytes = self.read_int_line()? as usize;
+        let buf = self.read(bytes)?;
+        self.expect_newline()?;
+        Ok(Value::Blob(buf))
     }
 
     fn parse_int(&mut self) -> Result<Value, ParseError> {
@@ -111,11 +133,12 @@ impl<'a, T: Read> Parser<T> {
     }
 
     fn parse_array(&mut self) -> Result<Value, ParseError> {
-        let length = self.read_int_line()?;
+        let length = self.read_int_line()? as usize;
         let mut rv = vec![];
-        rv.reserve(length as usize);
+        rv.reserve(length);
         for _ in 0..length {
-            rv.push(self.parse_value()?);
+            let v = self.parse_value()?;
+            rv.push(v);
         }
         Ok(Value::Array(rv))
     }
@@ -131,8 +154,11 @@ impl<'a, T: Read> Parser<T> {
         Ok(Value::Map(map))
     }
 
-    fn parse_big_int(&mut self) -> Result<Value, ParseError> {
-        Ok(self.parse_int()?)
+    fn parse_bigint(&mut self) -> Result<Value, ParseError> {
+        let line = self.read_string_line()?;
+        Ok(Value::Bigint(
+            BigInt::parse_bytes(line.as_bytes(), 10).unwrap(),
+        ))
     }
 
     fn parse_error(&mut self) -> Result<Value, ParseError> {
@@ -146,14 +172,14 @@ impl<'a, T: Read> Parser<T> {
     fn parse_double(&mut self) -> Result<Value, ParseError> {
         match self.read_string_line()?.trim().parse::<f64>() {
             Ok(value) => Ok(Value::Double(Float64::from(value))),
-            Err(_) => Err(ParseError::InvalidArgument),
+            Err(_) => Err(ParseError::Incomplete),
         }
     }
 
     fn parse_boolean(&mut self) -> Result<Value, ParseError> {
         let line = self.read_string_line()?;
         if line.len() != 1 {
-            return Err(ParseError::InvalidArgument);
+            return Err(ParseError::Incomplete);
         }
         Ok(if line.as_bytes()[0] as char == 't' {
             Value::Boolean(true)
@@ -161,6 +187,16 @@ impl<'a, T: Read> Parser<T> {
             Value::Boolean(false)
         })
     }
+}
+
+/// Parses bytes into a redis value.
+///
+/// This is the most straightforward way to parse something into a low
+/// level redis value instead of having to use a whole parser.
+///
+pub fn parse_redis_value<R: Read>(stream: R) -> Result<Value, ParseError> {
+    let mut parser = Parser::new(BufReader::new(stream));
+    parser.parse_value()
 }
 
 /// Parses the length of the paramenter in the slice
