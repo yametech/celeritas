@@ -22,17 +22,17 @@ impl<'a, T: Read> Parser<T> {
     pub fn parse_value(&mut self) -> Result<Value, ParseError> {
         let b = self.read_byte()?;
         match b as char {
-            '+' => self.parse_simple_string(),
-            ':' => self.parse_int(),
-            '$' => self.parse_blob(),
-            '*' => self.parse_array(),
-            '-' => self.parse_error(),
-            '_' => self.parse_null(),
-            '%' => self.parse_map(),
-            '~' => self.parse_set(),
-            '(' => self.parse_bigint(),
-            '#' => self.parse_boolean(),
-            ',' => self.parse_double(),
+            resp_event_type::SIMPLE_STRING => self.parse_simple_string(),
+            resp_event_type::NUMBER => self.parse_int(),
+            resp_event_type::BLOB_STRING => self.parse_blob(),
+            resp_event_type::ARRAY => self.parse_array(),
+            resp_event_type::SIMPLE_ERROR => self.parse_error(),
+            resp_event_type::NULL => self.parse_null(),
+            resp_event_type::MAP => self.parse_map(),
+            resp_event_type::SET => self.parse_set(),
+            resp_event_type::BIG_INT => self.parse_bigint(),
+            resp_event_type::BOOLEAN => self.parse_boolean(),
+            resp_event_type::DOUBLE => self.parse_double(),
             _ => Err(ParseError::InvalidArgument),
         }
     }

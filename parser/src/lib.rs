@@ -11,13 +11,14 @@ pub use codec::RedisCodec;
 pub use command::{Argument, Command};
 pub use error::ParseError;
 pub use parse::{parse_array, parse_redis_value};
+pub use resp::Value as Event;
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn _test_array() {
+    fn roundtrip_test_array() {
         let array = b"*3\r\n$3\r\nset\r\n$2\r\nxy\r\n$2\r\nab\r\n";
         assert_eq!(
             parse_redis_value(&array[..]).unwrap().as_bytes(),
