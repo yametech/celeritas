@@ -4,7 +4,6 @@ use futures::FutureExt;
 // use parser::Command;
 // use resp::{Value, ValuePair};
 use std::error::Error;
-
 use tokio::net::{TcpListener, TcpStream};
 use tokio::prelude::*;
 
@@ -91,3 +90,6 @@ async fn write_to_client(
 ) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
+
+mod redis;
+pub use redis::redis_main;
