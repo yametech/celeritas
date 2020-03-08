@@ -8,17 +8,94 @@ pub struct Argument {
     pub len: usize,
 }
 
-pub struct Command<'a> {
-    data: &'a [u8],
+pub struct Command {
+    pos: usize,
+    data: Vec<u8>,
     pub argv: Vec<Argument>,
 }
 
-impl<'a> Command<'a> {
-    pub fn new(input: &'a [u8], argv: Vec<Argument>) -> Self {
+impl Command {
+    pub fn cmd() -> Self {
+        let cmd = Self {
+            pos: 0,
+            data: vec![],
+            argv: vec![],
+        };
+        cmd
+    }
+
+    /// From bytes to cmmand
+    ///
+    pub fn new(input: &[u8], argv: Vec<Argument>) -> Self {
         Command {
+            pos: 0,
             argv: argv,
-            data: input,
+            data: input.to_vec(),
         }
+    }
+
+    #[inline]
+    fn add_argument_position(&mut self, len: usize) -> &mut Self {
+        self.argv.push(Argument {
+            pos: self.pos,
+            len: len,
+        });
+        self.pos += len;
+        self
+    }
+
+    #[inline]
+    fn pos_add_offset(&mut self) -> &mut Self {
+        self.pos += 1;
+        self
+    }
+
+    #[inline]
+    fn extend_len_bytes(&mut self, buf: Vec<u8>) -> &mut Self {
+        self.data.extend_from_slice(&buf);
+        self.pos += buf.len();
+        self.write_line();
+        self
+    }
+
+    #[inline]
+    fn extend_from_bytes(&mut self, buf: Vec<u8>) -> &mut Self {
+        self.data.extend_from_slice(&buf);
+        self.add_argument_position(buf.len());
+        self.write_line();
+        self
+    }
+
+    #[inline]
+    fn put_byte(&mut self, byte: u8) -> &mut Self {
+        self.data.push(byte);
+        self.pos_add_offset();
+        self
+    }
+
+    /// Write an command
+    pub fn write_arrs(&mut self, n: usize) -> &mut Self {
+        self.put_byte('*' as u8)
+            .extend_len_bytes(n.to_string().into_bytes())
+    }
+
+    /// Write a simple string into command
+    ///
+    pub fn write_simple(&mut self, val: &str) -> &mut Self {
+        self.put_byte('+' as u8)
+            .extend_from_bytes(val.to_string().into_bytes())
+    }
+
+    pub fn write_blob(&mut self, val: &str) -> &mut Self {
+        self.put_byte('$' as u8)
+            .extend_len_bytes(val.len().to_string().into_bytes())
+            .extend_from_bytes(val.to_string().into_bytes())
+    }
+
+    fn write_line(&mut self) -> &mut Self {
+        self.data.append(&mut b"\r\n".to_vec());
+        self.pos += 2;
+        self
     }
 
     /// Gets an str from a parameter
@@ -66,17 +143,52 @@ impl<'a> Command<'a> {
         Ok(data.to_vec())
     }
 
-    pub fn get_data(&self) -> &'a [u8] {
-        self.data
+    pub fn get_data(&self) -> &[u8] {
+        &self.data
     }
 }
 
-impl<'a> std::fmt::Debug for Command<'a> {
+impl std::fmt::Debug for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
         for a in self.argv.iter() {
             format_repr(f, &self.data[a.pos..(a.pos + a.len)]);
             f.write_str(" ");
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_command() {
+        let mut parser = Command::cmd();
+        let parser = parser
+            .write_arrs(3)
+            .write_blob(&"set")
+            .write_blob(&"a")
+            .write_blob(&"123");
+
+        println!("{:?}", parser);
+        assert_eq!(parser.get_str(0).unwrap(), "set");
+        assert_eq!(parser.get_str(1).unwrap(), "a");
+        assert_eq!(parser.get_str(2).unwrap(), "123");
+    }
+
+    #[test]
+    fn test_write_simple() {
+        let mut cmd = Command::cmd();
+        cmd.write_simple(&"123");
+        assert_eq!(cmd.get_data(), &b"+123\r\n"[..]);
+        assert_eq!(cmd.get_str(0).unwrap(), "123");
+    }
+
+    #[test]
+    fn test_write_blob() {
+        let mut cmd = Command::cmd();
+        cmd.write_blob("123");
+        assert_eq!(cmd.get_data(), &b"$3\r\n123\r\n"[..]);
+        assert_eq!(cmd.get_str(0).unwrap(), "123");
     }
 }

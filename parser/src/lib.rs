@@ -11,7 +11,7 @@ pub use codec::RedisCodec;
 pub use command::{Argument, Command};
 pub use error::ParseError;
 pub use parse::{parse_array, parse_redis_value};
-pub use resp::Value as Event;
+pub use resp::Value as ValueEvent;
 
 #[cfg(test)]
 mod tests {
