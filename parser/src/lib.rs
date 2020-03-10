@@ -1,6 +1,6 @@
 extern crate resp;
 use num_bigint::BigInt;
-use resp::{resp_event_type, Float64, Value, ValuePair};
+pub use resp::{resp_event_type, Float64, Value};
 
 mod codec;
 mod command;
@@ -11,7 +11,6 @@ pub use codec::RedisCodec;
 pub use command::{Argument, Command};
 pub use error::ParseError;
 pub use parse::{parse_array, parse_redis_value};
-pub use resp::Value as ValueEvent;
 
 #[cfg(test)]
 mod tests {

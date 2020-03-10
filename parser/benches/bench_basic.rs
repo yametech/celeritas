@@ -1,6 +1,6 @@
 #![feature(test)]
 extern crate test;
-use parser::parse_redis_value;
+use parser::{parse_redis_value, Command};
 use test::Bencher;
 
 #[bench]
@@ -15,12 +15,27 @@ fn bench_basic_roundtrip_all_type(b: &mut Bencher) {
 }
 
 #[bench]
-fn bench_basic_roundtrip_command(b:&mut Bencher) {
+fn bench_basic_roundtrip_command(b: &mut Bencher) {
     b.iter(|| {
         let cmd = b"*3\r\n$3\r\nset\r\n$6\r\nmy_key\r\n$8\r\nmy_value\r\n";
         assert_eq!(
             parse_redis_value(&cmd[..]).unwrap().as_bytes(),
             cmd.to_vec()
         )
+    })
+}
+
+#[bench]
+fn banch_cmd(b: &mut Bencher) {
+    b.iter(|| {
+        let mut cmd = Command::cmd();
+        let cmd = cmd
+            .write_arrs(3)
+            .write_blob(&"set")
+            .write_blob(&"a")
+            .write_blob(&"123");
+        assert_eq!(cmd.get_str(0).unwrap(), "set");
+        assert_eq!(cmd.get_str(1).unwrap(), "a");
+        assert_eq!(cmd.get_str(2).unwrap(), "123");
     })
 }

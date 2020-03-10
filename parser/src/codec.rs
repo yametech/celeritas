@@ -10,8 +10,8 @@ impl RedisCodec {
     }
 }
 
-impl Encoder for RedisCodec {
-    type Item = Value;
+/// upgrade tokio util 0.3
+impl Encoder<Value> for RedisCodec {
     type Error = ParseError;
     fn encode(&mut self, event: Value, buf: &mut BytesMut) -> Result<(), Self::Error> {
         let bytes = event.as_bytes();
@@ -29,5 +29,11 @@ impl Decoder for RedisCodec {
             Ok(v) => Ok(Some(v)),
             Err(e) => Err(e),
         }
+    }
+    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+        Ok(match self.decode(buf)? {
+            Some(frame) => Some(frame),
+            None => None,
+        })
     }
 }

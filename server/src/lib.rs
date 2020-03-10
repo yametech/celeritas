@@ -17,7 +17,7 @@ pub struct Server<'a> {
 impl<'a> Server<'a> {
     pub fn new(listen_addr: &'a str) -> Self {
         Server {
-            listen_addr: listen_addr,
+            listen_addr,
             proxy_addr_pool: vec!["127.0.0.1:6379"],
             // cmd_handle: None,
         }

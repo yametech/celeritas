@@ -13,7 +13,7 @@ impl<'a, T: Read> Parser<T> {
     /// be invoked multiple times.  In other words: the stream does not have
     /// to be terminated.
     pub fn new(reader: T) -> Parser<T> {
-        Parser { reader: reader }
+        Parser { reader }
     }
 
     /// parses a single value out of the stream.  If there are multiple
@@ -323,10 +323,7 @@ pub fn parse_array(input: &[u8]) -> Result<(Command, usize), ParseError> {
             return Err(ParseError::BadProtocol("invalid bulk length".to_owned()));
         }
         pos += arglenlen;
-        let arg = Argument {
-            pos: pos,
-            len: arglen,
-        };
+        let arg = Argument { pos, len: arglen };
         argv.push(arg);
         pos += arglen + 2;
         if pos > len || (pos == len && i != argc - 1) {

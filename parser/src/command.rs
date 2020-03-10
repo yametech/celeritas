@@ -29,17 +29,15 @@ impl Command {
     pub fn new(input: &[u8], argv: Vec<Argument>) -> Self {
         Command {
             pos: 0,
-            argv: argv,
+            argv,
             data: input.to_vec(),
         }
     }
 
+    /// Add argument position
     #[inline]
     fn add_argument_position(&mut self, len: usize) -> &mut Self {
-        self.argv.push(Argument {
-            pos: self.pos,
-            len: len,
-        });
+        self.argv.push(Argument { pos: self.pos, len });
         self.pos += len;
         self
     }
@@ -163,17 +161,17 @@ mod tests {
     use super::*;
     #[test]
     fn test_command() {
-        let mut parser = Command::cmd();
-        let parser = parser
+        let mut cmd = Command::cmd();
+        let cmd = cmd
             .write_arrs(3)
             .write_blob(&"set")
             .write_blob(&"a")
             .write_blob(&"123");
 
-        println!("{:?}", parser);
-        assert_eq!(parser.get_str(0).unwrap(), "set");
-        assert_eq!(parser.get_str(1).unwrap(), "a");
-        assert_eq!(parser.get_str(2).unwrap(), "123");
+        // println!("{:?}", cmd);
+        assert_eq!(cmd.get_str(0).unwrap(), "set");
+        assert_eq!(cmd.get_str(1).unwrap(), "a");
+        assert_eq!(cmd.get_str(2).unwrap(), "123");
     }
 
     #[test]
