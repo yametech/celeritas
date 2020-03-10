@@ -8,7 +8,7 @@ mod error;
 mod parse;
 
 pub use codec::RedisCodec;
-pub use command::{Argument, Command};
+pub use command::{write_array, write_simple, Argument, Command};
 pub use error::ParseError;
 pub use parse::{parse_array, parse_redis_value};
 

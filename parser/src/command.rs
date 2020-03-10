@@ -1,4 +1,5 @@
-use super::error::ParseError;
+use super::*;
+
 use std::str::from_utf8;
 use util::format_repr;
 
@@ -156,6 +157,23 @@ impl std::fmt::Debug for Command {
     }
 }
 
+/// externally use cmd function to generate Command
+/// enter the required redis protocol and convert it into specific protocol instructions
+pub fn write_array(op: &str, argv: &[&str]) -> Value {
+    let mut cmd = Command::cmd();
+    cmd.write_arrs(argv.len() + 1).write_blob(op);
+    for i in argv {
+        cmd.write_blob(i);
+    }
+    parse_redis_value(&cmd.get_data()[..]).unwrap()
+}
+
+pub fn write_simple(content: &str) -> Value {
+    let mut cmd = Command::cmd();
+    cmd.write_simple(content);
+    parse_redis_value(&cmd.get_data()[..]).unwrap()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,6 +190,24 @@ mod tests {
         assert_eq!(cmd.get_str(0).unwrap(), "set");
         assert_eq!(cmd.get_str(1).unwrap(), "a");
         assert_eq!(cmd.get_str(2).unwrap(), "123");
+    }
+
+    #[test]
+    fn test_cmd_generate_command_protocol() {
+        let cmd_set = write_array(&"set", &["key", "123"]);
+        assert_eq!(
+            cmd_set.as_bytes(),
+            &b"*3\r\n$3\r\nset\r\n$3\r\nkey\r\n$3\r\n123\r\n"[..]
+        );
+
+        let cmd_get = write_array(&"get", &["key"]);
+        assert_eq!(cmd_get.as_bytes(), &b"*2\r\n$3\r\nget\r\n$3\r\nkey\r\n"[..]);
+
+        let cmd_hset = write_array(&"hset", &["hkey", "field", "hvalue"]);
+        assert_eq!(
+            cmd_hset.as_bytes(),
+            &b"*4\r\n$4\r\nhset\r\n$4\r\nhkey\r\n$5\r\nfield\r\n$6\r\nhvalue\r\n"[..]
+        );
     }
 
     #[test]

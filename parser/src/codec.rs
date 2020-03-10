@@ -30,10 +30,10 @@ impl Decoder for RedisCodec {
             Err(e) => Err(e),
         }
     }
-    fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        Ok(match self.decode(buf)? {
-            Some(frame) => Some(frame),
-            None => None,
-        })
-    }
+    // fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
+    //     Ok(match self.decode(buf)? {
+    //         Some(frame) => Some(frame),
+    //         None => None,
+    //     })
+    // }
 }
