@@ -1,5 +1,5 @@
 use super::*;
-use bytes::{BufMut, BytesMut};
+use bytes::{Buf, BufMut, BytesMut};
 use tokio_util::codec::{Decoder, Encoder};
 
 pub struct RedisCodec;
@@ -25,10 +25,21 @@ impl Decoder for RedisCodec {
     type Item = Value;
     type Error = ParseError;
     fn decode(&mut self, src: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
-        match parse_redis_value(&src[..]) {
-            Ok(v) => Ok(Some(v)),
-            Err(e) => Err(e),
+        let len = src.len();
+        if len == 0 {
+            // there are no bytes to consume, stop querying the buffer
+            return Ok(None);
         }
+
+        let result = match parse_redis_value(&src[..]) {
+            Ok(v) => {
+                src.advance(v.as_bytes().len());
+                Ok(Some(v))
+            }
+            Err(e) => Err(e),
+        };
+
+        result
     }
     // fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
     //     Ok(match self.decode(buf)? {
