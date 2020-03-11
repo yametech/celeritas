@@ -2,7 +2,7 @@ use futures::SinkExt;
 use parser::{parse_array, Command, RedisCodec, Value};
 use tokio::net::TcpListener;
 use tokio::stream::StreamExt;
-use tokio_util::codec::{Framed, LinesCodec};
+use tokio_util::codec::Framed;
 
 use std::collections::HashMap;
 use std::{

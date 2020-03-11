@@ -16,17 +16,24 @@ pub struct Command {
 }
 
 impl Command {
+    // pub fn cmd<'a>() -> Option<&'a mut Self> {
+    //     let cmd = Self {
+    //         pos: 0,
+    //         data: vec![],
+    //         argv: vec![],
+    //     };
+    //     Some(&mut cmd)
+    // }
+
     pub fn cmd() -> Self {
-        let cmd = Self {
+        Self {
             pos: 0,
             data: vec![],
             argv: vec![],
-        };
-        cmd
+        }
     }
 
     /// From bytes to cmmand
-    ///
     pub fn new(input: &[u8], argv: Vec<Argument>) -> Self {
         Command {
             pos: 0,
@@ -79,7 +86,6 @@ impl Command {
     }
 
     /// Write a simple string into command
-    ///
     pub fn write_simple(&mut self, val: &str) -> &mut Self {
         self.put_byte('+' as u8)
             .extend_from_bytes(val.to_string().into_bytes())
@@ -145,6 +151,11 @@ impl Command {
     pub fn get_data(&self) -> &[u8] {
         &self.data
     }
+
+    /// Generate resp.value
+    pub fn get_value(&self) -> Result<Value, ParseError> {
+        parse_redis_value(&self.data[..])
+    }
 }
 
 impl std::fmt::Debug for Command {
@@ -165,13 +176,12 @@ pub fn write_array(op: &str, argv: &[&str]) -> Value {
     for i in argv {
         cmd.write_blob(i);
     }
-    parse_redis_value(&cmd.get_data()[..]).unwrap()
+    cmd.get_value().unwrap()
 }
 
 pub fn write_simple(content: &str) -> Value {
     let mut cmd = Command::cmd();
-    cmd.write_simple(content);
-    parse_redis_value(&cmd.get_data()[..]).unwrap()
+    cmd.write_simple(content).get_value().unwrap()
 }
 
 #[cfg(test)]
