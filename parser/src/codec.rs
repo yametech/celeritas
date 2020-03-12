@@ -30,16 +30,13 @@ impl Decoder for RedisCodec {
             // there are no bytes to consume, stop querying the buffer
             return Ok(None);
         }
-
-        let result = match parse_redis_value(&src[..]) {
+        match parse_redis_value(&src[..]) {
             Ok(v) => {
                 src.advance(v.as_bytes().len());
                 Ok(Some(v))
             }
             Err(e) => Err(e),
-        };
-
-        result
+        }
     }
     // fn decode_eof(&mut self, buf: &mut BytesMut) -> Result<Option<Self::Item>, Self::Error> {
     //     Ok(match self.decode(buf)? {

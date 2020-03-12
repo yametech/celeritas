@@ -1,4 +1,4 @@
-use server::{redis_main, Server};
+use server::redis_main;
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {

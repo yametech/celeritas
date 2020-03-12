@@ -1,14 +1,13 @@
 use futures::SinkExt;
-use parser::{parse_array, Command, RedisCodec, Value};
-use tokio::net::TcpListener;
-use tokio::stream::StreamExt;
-use tokio_util::codec::Framed;
-
+use parser::*;
 use std::collections::HashMap;
 use std::{
     error::Error,
     sync::{Arc, Mutex},
 };
+use tokio::net::TcpListener;
+use tokio::stream::StreamExt;
+use tokio_util::codec::Framed;
 
 // use std::io::{Error as IOError, ErrorKind};
 
@@ -51,11 +50,9 @@ pub async fn redis_main() -> Result<(), Box<dyn std::error::Error>> {
             while let Some(event) = frame.next().await {
                 match event {
                     Ok(Value::Array(value)) => {
-                        println!(
-                            "array => {:?}",
-                            std::str::from_utf8(&Value::Array(value).as_bytes())
-                        );
-                        if let Err(e) = frame.send(parser::write_simple(&"OK")).await {
+                        println!("array => {:?}", Value::Array(value).as_str());
+
+                        if let Err(e) = frame.send(write_simple(&"OK")).await {
                             println!("resp ok error {:?}", e);
                         }
                     }
