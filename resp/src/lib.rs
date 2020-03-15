@@ -454,6 +454,10 @@ impl Value {
             Value::Push(_) => resp_event_type::PUSH,
         };
     }
+
+    pub fn as_str(&self) -> String {
+        String::from_utf8(self.as_bytes().to_vec()).unwrap()
+    }
 }
 
 #[cfg(test)]
