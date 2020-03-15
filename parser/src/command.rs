@@ -124,7 +124,7 @@ impl Command {
     /// ```
     /// # use parser::{Command, Argument};
     /// let parser = Command::new(b"foo", vec![Argument { pos: 0, len: 3 }]);
-    /// assert_eq!(parser.get_slice(0).unwrap(), b"foo");
+    /// assert_eq!(pars``er.get_slice(0).unwrap(), b"foo");
     /// ```
     pub fn get_slice(&self, pos: usize) -> Result<&[u8], ParseError> {
         if pos > self.argv.len() {
@@ -183,6 +183,10 @@ pub fn write_simple(content: &str) -> Value {
     let mut cmd = Command::cmd();
     cmd.write_simple(content).get_value().unwrap()
 }
+
+// pub fn write_number(content: &str) -> Value {
+//     let mut cmd = Command::cmd();
+// }
 
 #[cfg(test)]
 mod tests {

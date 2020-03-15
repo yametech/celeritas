@@ -271,7 +271,7 @@ impl Logger {
             });
         }
 
-        Logger { tx: tx }
+        Logger { tx }
     }
 
     #[cfg(not(unix))]
@@ -319,7 +319,7 @@ impl Logger {
             });
         }
 
-        Logger { tx: tx }
+        Logger { tx }
     }
 
     /// Creates a new logger that writes in the standard output.
